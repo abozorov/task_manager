@@ -1,0 +1,96 @@
+package service
+
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/abozorov/task_manager/internal/models"
+	taskRepo "github.com/abozorov/task_manager/internal/repo/task"
+	userRepo "github.com/abozorov/task_manager/internal/repo/user"
+	"github.com/abozorov/task_manager/pkg/errs"
+)
+
+type TaskService struct {
+	userR *userRepo.UserRepo
+	taskR *taskRepo.TaskRepo
+}
+
+func NewTaskService(userR *userRepo.UserRepo, taskR *taskRepo.TaskRepo) *TaskService {
+	return &TaskService{
+		userR: userR,
+		taskR: taskR,
+	}
+}
+
+func (t *TaskService) Create(ctx context.Context, Task models.Task) error {
+	// validation
+	if !Task.Validate(true) {
+		return errs.ErrBadRequestBody
+	}
+
+	// creating
+	err := t.taskR.Create(ctx, Task)
+	if err != nil {
+		return fmt.Errorf("Task_service.Create: %w", err)
+	}
+
+	return nil
+}
+
+func (t *TaskService) GetAll(ctx context.Context) ([]models.Task, error) {
+	// get all Tasks
+	allTasks, err := t.taskR.GetAll(ctx)
+	if err != nil {
+		return []models.Task{}, fmt.Errorf("Task_service.GetAll: %w", err)
+	}
+
+	// get active Tasks
+	activeTasks := make([]models.Task, 0, len(allTasks))
+	for _, v := range allTasks {
+		if v.DeletedAt.IsZero() {
+			activeTasks = append(activeTasks, v)
+		}
+	}
+
+	return activeTasks, nil
+}
+
+func (t *TaskService) GetByID(ctx context.Context, id int) (*models.Task, error) {
+	// get all Tasks
+	Task, err := t.taskR.GetByID(ctx, id)
+	if err != nil {
+		return &models.Task{}, fmt.Errorf("Task_service.GetByID: %w", err)
+	}
+
+	// get active Tasks
+	if !Task.DeletedAt.IsZero() {
+		return &models.Task{}, fmt.Errorf("Task_serrvice.GetByID: %w", errs.ErrNotFound)
+	}
+	return Task, nil
+}
+
+func (t *TaskService) Update(ctx context.Context, Task models.Task) error {
+	// validation
+	if !Task.Validate(false) {
+		return errs.ErrBadRequestBody
+	}
+
+	// updating
+	err := t.taskR.Update(ctx, Task)
+	if err != nil {
+		return fmt.Errorf("Task_service.Update: %w", err)
+	}
+
+	return nil
+}
+
+func (t *TaskService) DeleteTask(ctx context.Context, id int) error {
+	// delete Task
+	err := t.taskR.DeleteByID(ctx, id)
+	if err != nil {
+		return fmt.Errorf("Task_service.DeleteByID: %w", err)
+	}
+
+	return nil
+}

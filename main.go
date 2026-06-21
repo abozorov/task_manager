@@ -12,9 +12,15 @@ import (
 
 	"github.com/abozorov/task_manager/internal/config"
 	"github.com/abozorov/task_manager/internal/handlers"
+	taskHandlers "github.com/abozorov/task_manager/internal/handlers/task"
+	userHandlers "github.com/abozorov/task_manager/internal/handlers/user"
+
 	"github.com/abozorov/task_manager/internal/models"
-	"github.com/abozorov/task_manager/internal/repo"
-	"github.com/abozorov/task_manager/internal/service"
+	taskRepo "github.com/abozorov/task_manager/internal/repo/task"
+	userRepo "github.com/abozorov/task_manager/internal/repo/user"
+	taskService "github.com/abozorov/task_manager/internal/service/task"
+	userService "github.com/abozorov/task_manager/internal/service/user"
+
 	"github.com/abozorov/task_manager/pkg/logger"
 	"go.uber.org/zap"
 	"gorm.io/driver/postgres"
@@ -34,6 +40,7 @@ func main() {
 		cfg.DBUser,
 		cfg.DBPassword,
 		cfg.DBName,
+		cfg.DBPort,
 	)
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
@@ -43,7 +50,11 @@ func main() {
 	// migration db
 	err = db.AutoMigrate(&models.Task{})
 	if err != nil {
-		log.Fatal("Failed to connect to database:", err)
+		log.Fatal("Failed automigrate models.Task:", err)
+	}
+	err = db.AutoMigrate(&models.User{})
+	if err != nil {
+		log.Fatal("Failed automigrate models.User:", err)
 	}
 
 	// create logger
@@ -54,12 +65,17 @@ func main() {
 	}
 
 	// create layers
-	repo := repo.NewTaskRepo(db)
-	service := service.NewTaskService(repo)
-	tashHandler := handlers.NewTaskHandler(service, logger)
+	taskR := taskRepo.NewTaskRepo(db)
+	userR := userRepo.NewUserRepo(db)
+
+	taskS := taskService.NewTaskService(userR, taskR)
+	userS := userService.NewUserService(userR, taskR)
+
+	taskH := taskHandlers.NewTaskHandler(taskS, logger)
+	userH := userHandlers.NewUserHandler(userS, logger)
 
 	// create router
-	router := handlers.NewRouter(*tashHandler)
+	router := handlers.NewRouter(taskH, userH)
 	server := &http.Server{
 		Addr:    cfg.HttpHost,
 		Handler: router,
