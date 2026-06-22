@@ -158,5 +158,5 @@ func (h *UserHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// write response
-	w.Write([]byte(fmt.Sprintf("user %d deleteed", id)))
+	w.Write([]byte(fmt.Sprintf("user %d deleted", id)))
 }

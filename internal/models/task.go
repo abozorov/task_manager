@@ -15,8 +15,9 @@ type Task struct {
 	DeletedAt   time.Time `gorm:"default:null;"`
 }
 
-func NewTask(title, description, status string) *Task {
+func NewTask(user_id int, title, description, status string) *Task {
 	return &Task{
+		UserID:      user_id,
 		Title:       title,
 		Description: description,
 		Status:      status,
@@ -31,5 +32,6 @@ func (t *Task) Validate(create bool) bool {
 	return len([]rune(t.Title)) > 0 &&
 		len([]rune(t.Description)) > 0 &&
 		len([]rune(t.Status)) > 0 &&
-		(create || t.ID > 0)
+		(create || t.ID > 0) &&
+		(create || t.UserID > 0)
 }

@@ -2,11 +2,11 @@ package errs
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"net/http"
 
 	"github.com/jackc/pgx/v5/pgconn"
+	"gorm.io/gorm"
 )
 
 var (
@@ -89,7 +89,7 @@ func PostgresToErrs(err error) error {
 
 	// no rows
 	switch {
-	case errors.Is(err, sql.ErrNoRows):
+	case errors.Is(err, gorm.ErrRecordNotFound):
 		return ErrNotFound
 
 	case errors.Is(err, context.DeadlineExceeded):

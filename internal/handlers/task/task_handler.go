@@ -2,6 +2,7 @@ package taskHandler
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -64,13 +65,18 @@ func (h *TaskHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// creating & transform models.task -> task
-	err = h.service.Create(r.Context(), *models.NewTask(tsk.Title, tsk.Description, tsk.Status))
+	err = h.service.Create(r.Context(), *models.NewTask(
+		tsk.UserID,
+		tsk.Title,
+		tsk.Description,
+		tsk.Status,
+	))
 	if err != nil {
 		h.logger.Error("task_handler.Create: ", zap.String("error", err.Error()))
 		errs.ErrsToHttp(w, err)
 		return
 	}
-	w.Write([]byte("User Created"))
+	w.Write([]byte("task Created"))
 }
 
 func (h *TaskHandler) GetAll(w http.ResponseWriter, r *http.Request) {
@@ -131,7 +137,49 @@ func (h *TaskHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *TaskHandler) Update(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
 
+	// get user
+	tsk := taskRequest{}
+	err := json.NewDecoder(r.Body).Decode(&tsk)
+	if err != nil {
+		errs.ErrsToHttp(w, errs.ErrBadRequestBody)
+		return
+	}
+
+	// creating & transform models.User -> user
+	err = h.service.Update(r.Context(), models.Task{
+		Title:       tsk.Title,
+		Description: tsk.Description,
+		Status:      tsk.Status,
+	})
+	if err != nil {
+		h.logger.Error("task_handler.Update: ", zap.String("error", err.Error()))
+		errs.ErrsToHttp(w, err)
+		return
+	}
+	w.Write([]byte("task updated"))
 }
 
-func (h *TaskHandler) Delete(w http.ResponseWriter, r *http.Request) {}
+func (h *TaskHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+
+	// check path
+	id, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		h.logger.Error("task_handler.Delete: ", zap.String("error", err.Error()))
+		errs.ErrsToHttp(w, errs.ErrBadRequest)
+		return
+	}
+
+	// get by id
+	err = h.service.DeleteTask(r.Context(), id)
+	if err != nil {
+		h.logger.Error("task_handler.Delete: ", zap.String("error", err.Error()))
+		errs.ErrsToHttp(w, err)
+		return
+	}
+
+	// write response
+	w.Write([]byte(fmt.Sprintf("user %d deleted", id)))
+}

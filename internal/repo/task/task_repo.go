@@ -49,7 +49,7 @@ func (t *TaskRepo) GetByID(ctx context.Context, id int) (*models.Task, error) {
 		"status",
 		"created_at",
 		"deleted_at",
-	).Where("id = ", id).First(&task)
+	).Where("id = ?", id).First(task)
 	return task, errs.PostgresToErrs(tx.Error)
 }
 

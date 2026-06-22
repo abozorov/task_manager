@@ -1,6 +1,5 @@
 package service
 
-
 import (
 	"context"
 	"fmt"
@@ -23,16 +22,25 @@ func NewTaskService(userR *userRepo.UserRepo, taskR *taskRepo.TaskRepo) *TaskSer
 	}
 }
 
-func (t *TaskService) Create(ctx context.Context, Task models.Task) error {
+func (t *TaskService) Create(ctx context.Context, task models.Task) error {
 	// validation
-	if !Task.Validate(true) {
+	if !task.Validate(true) {
 		return errs.ErrBadRequestBody
+	}
+	user, err := t.userR.GetByID(ctx, task.UserID)
+	if err != nil {
+		return fmt.Errorf("task_service.Create: %w", err)
+	}
+
+	// user is active
+	if !user.DeletedAt.IsZero() {
+		return fmt.Errorf("task_service.GetByID: %w", errs.ErrUserNotFound)
 	}
 
 	// creating
-	err := t.taskR.Create(ctx, Task)
+	err = t.taskR.Create(ctx, task)
 	if err != nil {
-		return fmt.Errorf("Task_service.Create: %w", err)
+		return fmt.Errorf("task_service.Create: %w", err)
 	}
 
 	return nil
@@ -42,7 +50,7 @@ func (t *TaskService) GetAll(ctx context.Context) ([]models.Task, error) {
 	// get all Tasks
 	allTasks, err := t.taskR.GetAll(ctx)
 	if err != nil {
-		return []models.Task{}, fmt.Errorf("Task_service.GetAll: %w", err)
+		return []models.Task{}, fmt.Errorf("task_service.GetAll: %w", err)
 	}
 
 	// get active Tasks
@@ -60,12 +68,12 @@ func (t *TaskService) GetByID(ctx context.Context, id int) (*models.Task, error)
 	// get all Tasks
 	Task, err := t.taskR.GetByID(ctx, id)
 	if err != nil {
-		return &models.Task{}, fmt.Errorf("Task_service.GetByID: %w", err)
+		return &models.Task{}, fmt.Errorf("task_service.GetByID: %w", err)
 	}
 
 	// get active Tasks
 	if !Task.DeletedAt.IsZero() {
-		return &models.Task{}, fmt.Errorf("Task_serrvice.GetByID: %w", errs.ErrNotFound)
+		return &models.Task{}, fmt.Errorf("task_service.GetByID: %w", errs.ErrNotFound)
 	}
 	return Task, nil
 }
@@ -81,7 +89,6 @@ func (t *TaskService) Update(ctx context.Context, Task models.Task) error {
 	if err != nil {
 		return fmt.Errorf("Task_service.Update: %w", err)
 	}
-
 	return nil
 }
 
@@ -91,6 +98,5 @@ func (t *TaskService) DeleteTask(ctx context.Context, id int) error {
 	if err != nil {
 		return fmt.Errorf("Task_service.DeleteByID: %w", err)
 	}
-
 	return nil
 }

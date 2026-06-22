@@ -65,7 +65,7 @@ func (u *UserService) GetByID(ctx context.Context, id int) (*models.User, error)
 
 	// get active users
 	if !user.DeletedAt.IsZero() {
-		return &models.User{}, fmt.Errorf("user_serrvice.GetByID: %w", errs.ErrUserNotFound)
+		return &models.User{}, fmt.Errorf("user_service.GetByID: %w", errs.ErrUserNotFound)
 	}
 	return user, nil
 }
